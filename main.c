@@ -45,6 +45,16 @@ void byteArrayToHexStringWithZero(uint8_t* byteArray, uint16_t length, uint8_t* 
     }
 }
 
+uint8_t* getTlvListBuffer(void)
+{
+    return tlvListBufferS;
+}
+
+uint8_t* getTlvNodeHeader(void)
+{
+    return tlvHeaderS;
+}
+
 /*-------------  TLV builder Functions -------------*/
 
 int caclulateLenOfLength(int valueLen)
@@ -224,6 +234,11 @@ uint8_t freeTlvList(void)
     }
 }
 
+uint8_t freeTlvListBuffer(void)
+{
+    free(tlvListBufferS);
+}
+
 int caculateTlvListBufferLength(void)
 {
     int sum = 0;
@@ -235,7 +250,7 @@ int caculateTlvListBufferLength(void)
 
 }
 
-void fillTlvListBuffer()
+void fillTlvListBuffer(void)
 {
     int offset = 0;
     for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL; tlvCurrentS = tlvCurrentS->next)
@@ -245,19 +260,19 @@ void fillTlvListBuffer()
     }
 }
 
-int buildTlvListBuffer()
+int buildTlvListBuffer(void)
 {
     int tlvListBufferLength;
     tlvListBufferLength = caculateTlvListBufferLength();
     if(tlvListBufferS != NULL)
-        free(tlvListBufferS);
+        freeTlvListBuffer();
     if((tlvListBufferS = (uint8_t*)calloc(tlvListBufferLength, sizeof(uint8_t))) == NULL)
     {
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
     }
 //    printf("TLV List Buffer length : %d\n\r", tlvListBufferLength);
-    fillTlvListBuffer(tlvListBufferS);
+    fillTlvListBuffer();
     return tlvListBufferLength;
 }
 
@@ -350,7 +365,7 @@ void testTlvListBuild(void)
     memset(outstr, 0x00, sizeof(outstr));
     byteArrayToHexStringWithZero(tlvListBufferS, tlvListBufferLength, outstr);
     printf("TLV List Buffer : %s\n\r", outstr);
-    free(tlvListBufferS);
+    freeTlvListBuffer();
     freeTlvList();
     printf("Test function tlvListBuild Successfully done.\n\r\n\r");
 }
@@ -398,7 +413,7 @@ void testBuildTlvExample1(void)
     memset(outstr, 0x00, sizeof(outstr));
     byteArrayToHexStringWithZero(tlvListBufferS, tlvListBufferLength, outstr);
     printf("TLV List Buffer : %s\n\r", outstr);
-    free(tlvListBufferS);
+    freeTlvListBuffer();
 }
 
 /*-------------  TLV Parser Functions -------------*/
@@ -650,7 +665,7 @@ void testTlvListParse(void)
                                0x9F, 0x02, 0x06, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56,
                                0x53, 0x08, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67
                               };
-    int tlvListBufferLength =  sizeof(tlvListBuffer) / sizeof(uint8_t);;
+    int tlvListBufferLength =  sizeof(tlvListBuffer);
     uint8_t testTag1[3] = {0xDF, 0x92, 0x23};
     uint8_t testValue1[5] = {0x11, 0x19, 0x23, 0x44, 0x55};
     int testTagLen1 = sizeof(testTag1);
@@ -727,7 +742,7 @@ void testParseExmaple1(void)
     0x75, 0x86, 0x45, 0x35, 0x83, 0xB4, 0xA0, 0x3A, 0xB3, 0x33, 0xFB, 0x21, 0x0F, 0xD1, 0xCD,
     0x4F, 0x8A, 0xC3, 0x60, 0x3D, 0x75, 0x68, 0x8E,
     };
-    int tlvListBufferLength =  sizeof(tlvListBuffer) / sizeof(uint8_t);;
+    int tlvListBufferLength =  sizeof(tlvListBuffer);
     initTlvList();
     tlvListParse(tlvListBuffer, tlvListBufferLength);
     printAllOfTlvTagValuePair();
@@ -741,7 +756,7 @@ void testParseExmaple2(void)
     0x6F, 0x1A, 0x84, 0x0E, 0x31, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44,
     0x46, 0x30, 0x31, 0xA5, 0x08, 0x88, 0x01, 0x02, 0x5F, 0x2D, 0x02, 0x65, 0x6E
     };
-    int tlvListBufferLength =  sizeof(tlvListBuffer) / sizeof(uint8_t);;
+    int tlvListBufferLength =  sizeof(tlvListBuffer);
     initTlvList();
     tlvListParse(tlvListBuffer, tlvListBufferLength);
     printAllOfTlvTagValuePair();
@@ -757,14 +772,14 @@ void tlvUnitTest(void)
     testGetLenOfLengthFromList();
     testGetValueLenFromLength();
     testTlvListParse();
+    testBuildTlvExample1();
+    testParseExmaple1();
+    testParseExmaple2();
     printf("All tests passes successfully.\n\r");
 }
 
 int main()
 {
-//    tlvUnitTest();
-    testTlvListBuild();
-    testBuildTlvExample1();
-    testParseExmaple2();
+    tlvUnitTest();
     return 0;
 }
