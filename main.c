@@ -18,6 +18,11 @@
 #define uint32 unsigned long int
 #endif // uint32
 
+#ifndef __cplusplus
+#define NULL ((void *)0)
+#else   /* C++ */
+
+#endif
 #define LCD_STR_MEMMORY_LEAKAGE "Memmory Leakage"
 #define MSG_ERROR               "Error:"
 #define displayMessageBox(a,b)   printf("%s %s.\n\r", b, a)
@@ -44,6 +49,8 @@ static tlvNode_t * tlvHeaderS;
 static tlvNode_t * tlvCurrentS;
 static uint8   * tlvListBufferS;
 
+/*-------------  TLV Common Functions -------------*/
+
 void byteArrayToHexStringWithZero(uint8* byteArray, uint16 length, uint8* outStr)
 {
     uint16 i = 0;
@@ -64,6 +71,46 @@ uint8* getTlvListBuffer(void)
 tlvNode_t* getTlvNodeHeader(void)
 {
     return tlvHeaderS;
+}
+
+void freeTlvList(void)
+{
+    tlvNode_t* tlvPrevious;
+    for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL;)
+    {
+        free(tlvCurrentS->tlvInfo->tag);
+        free(tlvCurrentS->tlvInfo->length);
+        free(tlvCurrentS->tlvInfo->value);
+        free(tlvCurrentS->tlvInfo->tlvBuffer);
+        free(tlvCurrentS->tlvInfo);
+        tlvPrevious = tlvCurrentS;
+        tlvCurrentS = tlvCurrentS->next;
+        free(tlvPrevious);
+    }
+}
+
+void freeTlvListBuffer(void)
+{
+    free(tlvListBufferS);
+    tlvListBufferS = NULL;
+}
+
+uint8 initTlvList(void)
+{
+    if((tlvHeaderS = (tlvNode_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
+    {
+        displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
+        return FALSE;
+    }
+    tlvHeaderS->tlvInfo = NULL;
+    tlvHeaderS->next    = NULL;
+    tlvCurrentS         = tlvHeaderS;
+    return TRUE;
+}
+
+uint8 initTlvListBuffer(void)
+{
+    return TRUE;
 }
 
 /*-------------  TLV builder Functions -------------*/
@@ -214,40 +261,6 @@ void printAllOfTlvBuffers(void)
     }
 }
 
-uint8 initTlvList()
-{
-    if((tlvHeaderS = (tlvNode_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
-    {
-        displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
-        return FALSE;
-    }
-    tlvHeaderS->tlvInfo = NULL;
-    tlvHeaderS->next    = NULL;
-    tlvCurrentS         = tlvHeaderS;
-    return TRUE;
-}
-
-void freeTlvList(void)
-{
-    tlvNode_t* tlvPrevious;
-    for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL;)
-    {
-        free(tlvCurrentS->tlvInfo->tag);
-        free(tlvCurrentS->tlvInfo->length);
-        free(tlvCurrentS->tlvInfo->value);
-        free(tlvCurrentS->tlvInfo->tlvBuffer);
-        free(tlvCurrentS->tlvInfo);
-        tlvPrevious = tlvCurrentS;
-        tlvCurrentS = tlvCurrentS->next;
-        free(tlvPrevious);
-    }
-}
-
-void freeTlvListBuffer(void)
-{
-    free(tlvListBufferS);
-}
-
 uint32 caculateTlvListBufferLength(void)
 {
     uint32 sum = 0;
@@ -279,7 +292,6 @@ uint32 buildTlvListBuffer(void)
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
     }
-//    printf("TLV List Buffer length : %d\n\r", tlvListBufferLength);
     fillTlvListBuffer();
     return tlvListBufferLength;
 }
@@ -405,6 +417,7 @@ void testBuildTlvExample1(void)
     uint8 tag4[] = {0xA5};
     addNexTlvToList(tag3, sizeof(tag3), value3, sizeof(value3));
     addNexTlvToList(tag4, sizeof(tag4), tlvListBufferS, tlvListBufferLength);
+//    freeTlvListBuffer();
     tlvListBufferLength = buildTlvListBuffer();
     printAllOfTlvBuffers();
     printf("TLV List Buffer length : %ld\n\r", tlvListBufferLength);
@@ -412,6 +425,7 @@ void testBuildTlvExample1(void)
     initTlvList();
     uint8 tag5[] = {0x6F};
     addNexTlvToList(tag5, sizeof(tag5), tlvListBufferS, tlvListBufferLength);
+//    freeTlvListBuffer();
     tlvListBufferLength = buildTlvListBuffer();
     printAllOfTlvBuffers();
     printf("TLV List Buffer length : %ld\n\r", tlvListBufferLength);
