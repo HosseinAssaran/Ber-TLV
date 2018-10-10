@@ -1,41 +1,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #define TRUE 1
 #define FALSE 0
 
-#define uint8_t unsigned char
-#define uint16_t unsigned int
+#ifndef uint8
+#define uint8 unsigned char
+#endif // uint8
+
+#ifndef uint16
+#define uint16 unsigned int
+#endif // uint16
+
+#ifndef uint32
+#define uint32 unsigned long int
+#endif // uint32
+
 #define LCD_STR_MEMMORY_LEAKAGE "Memmory Leakage"
 #define MSG_ERROR               "Error:"
-#define displayMessageBox(a,b)   printf("%s %s", b, a)
+#define displayMessageBox(a,b)   printf("%s %s.\n\r", b, a)
 
 typedef struct
 {
-uint8_t* tag;
-uint8_t* length;
-uint8_t* value;
-uint8_t* tlvBuffer;
-int      tagLen;
-int      lenOfLength;
-int      valueLen;
-int      tlvBufferLen;
-uint8_t  nestLevel;
+uint8*  tag;
+uint8*  length;
+uint8*  value;
+uint8*  tlvBuffer;
+uint32  tagLen;
+uint32  lenOfLength;
+uint32  valueLen;
+uint32  tlvBufferLen;
+uint8   nestLevel;
 }tlvInfoST;
 
 typedef struct tlvNode {
     tlvInfoST * tlvInfo;
-    struct node * next;
+    struct tlvNode * next;
 } tlvNode_t;
 
 static tlvNode_t * tlvHeaderS;
 static tlvNode_t * tlvCurrentS;
-static uint8_t   * tlvListBufferS;
+static uint8   * tlvListBufferS;
 
-void byteArrayToHexStringWithZero(uint8_t* byteArray, uint16_t length, uint8_t* outStr)
+void byteArrayToHexStringWithZero(uint8* byteArray, uint16 length, uint8* outStr)
 {
-    uint16_t i = 0;
+    uint16 i = 0;
     char hex[3] = { 0 };
 
     for (i = 0; i < length; i++)
@@ -45,21 +56,21 @@ void byteArrayToHexStringWithZero(uint8_t* byteArray, uint16_t length, uint8_t* 
     }
 }
 
-uint8_t* getTlvListBuffer(void)
+uint8* getTlvListBuffer(void)
 {
     return tlvListBufferS;
 }
 
-uint8_t* getTlvNodeHeader(void)
+tlvNode_t* getTlvNodeHeader(void)
 {
     return tlvHeaderS;
 }
 
 /*-------------  TLV builder Functions -------------*/
 
-int caclulateLenOfLength(int valueLen)
+uint32 caclulateLenOfLength(uint32 valueLen)
 {
-    int numBytes = 1;
+    uint32 numBytes = 1;
     if(valueLen > 0 && valueLen < 128)
     {
         numBytes = 1;
@@ -75,7 +86,7 @@ int caclulateLenOfLength(int valueLen)
 
 void fillLength(tlvInfoST* tlvInfo)
 {
-    int i;
+    uint32 i;
     if(tlvInfo->lenOfLength < 2)
         tlvInfo->length[0] = tlvInfo->valueLen;
     else
@@ -86,9 +97,9 @@ void fillLength(tlvInfoST* tlvInfo)
     }
 }
 
-uint8_t updateTlvBuffer(tlvInfoST* tlvInfo)
+void updateTlvBuffer(tlvInfoST* tlvInfo)
 {
-    int offset = 0;
+    uint32 offset = 0;
     // TAG
     memcpy(tlvInfo->tlvBuffer + offset, tlvInfo->tag, tlvInfo->tagLen);
     offset += tlvInfo->tagLen;
@@ -100,11 +111,9 @@ uint8_t updateTlvBuffer(tlvInfoST* tlvInfo)
     // VALUE
     memcpy(tlvInfo->tlvBuffer + offset, tlvInfo->value, tlvInfo->valueLen);
 //    offset += tlvInfo.valueLen;
-
-    return TRUE;
 }
 
-uint8_t addNexTlvToList(uint8_t * tag, int tagLen, uint8_t * value, int valueLen)
+uint8 addNexTlvToList(uint8 * tag, uint32 tagLen, uint8 * value, uint32 valueLen)
 {
 tlvNode_t* tlvPrevious;
 tlvInfoST* tlvInfo;
@@ -112,7 +121,7 @@ tlvInfoST* tlvInfo;
 /**< Memory Allocation of next node if tlvInfo of Current node is not empty*/
 if(tlvCurrentS->tlvInfo != NULL)
 {
-    if((tlvCurrentS->next = (uint8_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
+    if((tlvCurrentS->next = (tlvNode_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
     {
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
@@ -123,7 +132,7 @@ if(tlvCurrentS->tlvInfo != NULL)
 }
 
 /**< Allocate memory for tlvInfo */
-if((tlvCurrentS->tlvInfo = (uint8_t*)calloc(1, sizeof(tlvInfoST))) == NULL)
+if((tlvCurrentS->tlvInfo = (tlvInfoST*)calloc(1, sizeof(tlvInfoST))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvCurrentS);
@@ -138,7 +147,7 @@ tlvInfo->valueLen = valueLen;
 tlvInfo->lenOfLength = caclulateLenOfLength(valueLen);
 tlvInfo->tlvBufferLen =  tlvInfo->tagLen + tlvInfo->lenOfLength + tlvInfo->valueLen;
 
-if((tlvInfo->tag = (uint8_t*)calloc(tlvInfo->tagLen, sizeof(uint8_t))) == NULL)
+if((tlvInfo->tag = (uint8*)calloc(tlvInfo->tagLen, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo);
@@ -148,7 +157,7 @@ if((tlvInfo->tag = (uint8_t*)calloc(tlvInfo->tagLen, sizeof(uint8_t))) == NULL)
     return FALSE;
 }
 
-if((tlvInfo->length = (uint8_t*)calloc(tlvInfo->lenOfLength, sizeof(uint8_t))) == NULL)
+if((tlvInfo->length = (uint8*)calloc(tlvInfo->lenOfLength, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo->tag);
@@ -159,7 +168,7 @@ if((tlvInfo->length = (uint8_t*)calloc(tlvInfo->lenOfLength, sizeof(uint8_t))) =
     return FALSE;
 }
 
-if((tlvInfo->value = (uint8_t*)calloc(tlvInfo->valueLen, sizeof(uint8_t))) == NULL)
+if((tlvInfo->value = (uint8*)calloc(tlvInfo->valueLen, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo->tag);
@@ -171,7 +180,7 @@ if((tlvInfo->value = (uint8_t*)calloc(tlvInfo->valueLen, sizeof(uint8_t))) == NU
     return FALSE;
 }
 
-if((tlvInfo->tlvBuffer = (uint8_t*)calloc(tlvInfo->tlvBufferLen, sizeof(uint8_t))) == NULL)
+if((tlvInfo->tlvBuffer = (uint8*)calloc(tlvInfo->tlvBufferLen, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo->tag);
@@ -195,19 +204,19 @@ return TRUE;
 
 void printAllOfTlvBuffers(void)
 {
-    uint8_t outstr[1000];
-    int i = 0;
+    uint8 outstr[1000];
+    uint32 i = 0;
     for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL; tlvCurrentS = tlvCurrentS->next)
     {
         memset(outstr, 0x00, sizeof(outstr));
         byteArrayToHexStringWithZero(tlvCurrentS->tlvInfo->tlvBuffer, tlvCurrentS->tlvInfo->tlvBufferLen, outstr);
-        printf("TLV Buffer %d : %s\n\r", i++, outstr);
+        printf("TLV Buffer %ld : %s\n\r", i++, outstr);
     }
 }
 
-uint8_t initTlvList()
+uint8 initTlvList()
 {
-    if((tlvHeaderS = (uint8_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
+    if((tlvHeaderS = (tlvNode_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
     {
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
@@ -215,10 +224,10 @@ uint8_t initTlvList()
     tlvHeaderS->tlvInfo = NULL;
     tlvHeaderS->next    = NULL;
     tlvCurrentS         = tlvHeaderS;
-
+    return TRUE;
 }
 
-uint8_t freeTlvList(void)
+void freeTlvList(void)
 {
     tlvNode_t* tlvPrevious;
     for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL;)
@@ -234,25 +243,24 @@ uint8_t freeTlvList(void)
     }
 }
 
-uint8_t freeTlvListBuffer(void)
+void freeTlvListBuffer(void)
 {
     free(tlvListBufferS);
 }
 
-int caculateTlvListBufferLength(void)
+uint32 caculateTlvListBufferLength(void)
 {
-    int sum = 0;
+    uint32 sum = 0;
     for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL; tlvCurrentS = tlvCurrentS->next)
     {
         sum += tlvCurrentS->tlvInfo->tlvBufferLen;
     }
     return sum;
-
 }
 
 void fillTlvListBuffer(void)
 {
-    int offset = 0;
+    uint32 offset = 0;
     for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL; tlvCurrentS = tlvCurrentS->next)
     {
         memcpy(tlvListBufferS + offset, tlvCurrentS->tlvInfo->tlvBuffer, tlvCurrentS->tlvInfo->tlvBufferLen);
@@ -260,13 +268,13 @@ void fillTlvListBuffer(void)
     }
 }
 
-int buildTlvListBuffer(void)
+uint32 buildTlvListBuffer(void)
 {
-    int tlvListBufferLength;
+    uint32 tlvListBufferLength;
     tlvListBufferLength = caculateTlvListBufferLength();
     if(tlvListBufferS != NULL)
         freeTlvListBuffer();
-    if((tlvListBufferS = (uint8_t*)calloc(tlvListBufferLength, sizeof(uint8_t))) == NULL)
+    if((tlvListBufferS = (uint8*)calloc(tlvListBufferLength, sizeof(uint8))) == NULL)
     {
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
@@ -278,10 +286,10 @@ int buildTlvListBuffer(void)
 
 void testLenOfLength(void)
 {
-    int i;
-    int length[6] = {0x35, 0xA0, 0x100, 0xF2D3, 0xDC43FF, 0x34895F2E };
-    uint8_t testLenOfLength[6] = {1, 2, 3, 3, 4, 5};
-    uint8_t lenOfLength[6];
+    uint32 i;
+    uint32 length[6] = {0x35, 0xA0, 0x100, 0xF2D3, 0xDC43FF, 0x34895F2E };
+    uint8 testLenOfLength[6] = {1, 2, 3, 3, 4, 5};
+    uint8 lenOfLength[6];
     memset(lenOfLength, 0x00, 6);
     for(i = 0; i < 6; i++)
         lenOfLength[i] = caclulateLenOfLength(length[i]);
@@ -289,17 +297,17 @@ void testLenOfLength(void)
     printf("Test function lenOfLength Successfully done.\n\r");
 }
 
-void testFillLength(void)
+uint8 testFillLength(void)
 {
-    int i, j;
+    uint32 i, j;
     tlvInfoST tlvInfoTest;
-    int length[6] = {0x35, 0xA0, 0x100, 0xF2D3, 0xDC43FF, 0x34895F2E };
-    uint8_t testTlvLength[6][5] = {{0x35}, {0x81 ,0xA0}, {0x82 ,0x01 ,0x00}, {0x82 ,0xF2 ,0xD3}, {0x83 ,0xDC ,0x43 ,0xFF}, {0x84 ,0x34 ,0x89 ,0x5F ,0x2E}};
+    uint32 length[6] = {0x35, 0xA0, 0x100, 0xF2D3, 0xDC43FF, 0x34895F2E };
+    uint8 testTlvLength[6][5] = {{0x35}, {0x81 ,0xA0}, {0x82 ,0x01 ,0x00}, {0x82 ,0xF2 ,0xD3}, {0x83 ,0xDC ,0x43 ,0xFF}, {0x84 ,0x34 ,0x89 ,0x5F ,0x2E}};
 
     for(i = 0; i < 6; i++) {
         tlvInfoTest.valueLen = length[i];
         tlvInfoTest.lenOfLength = caclulateLenOfLength(tlvInfoTest.valueLen);
-        if((tlvInfoTest.length = (uint8_t*)calloc(tlvInfoTest.lenOfLength, sizeof(uint8_t))) == NULL)
+        if((tlvInfoTest.length = (uint8*)calloc(tlvInfoTest.lenOfLength, sizeof(uint8))) == NULL)
         {
             displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
             for(j = 0; j < i; j++)
@@ -310,36 +318,37 @@ void testFillLength(void)
         assert(memcmp(tlvInfoTest.length, testTlvLength[i], tlvInfoTest.lenOfLength) == 0);
         free(tlvInfoTest.length);
     }
+    return TRUE;
     printf("Test function fillLength Successfully done.\n\r");
 }
 
 void testTlvListBuild(void)
 {
-    int tlvListBufferLength;
-    int testTlvListBufferLength = 28;
-    uint8_t testTlvListBuffer[] = {
+    uint32 tlvListBufferLength;
+    uint32 testTlvListBufferLength = 28;
+    uint8 testTlvListBuffer[] = {
         0xDF, 0x92, 0x23, 0x05, 0x11, 0x19, 0x23, 0x44, 0x55,
         0x9F, 0x02, 0x06, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56,
         0x53, 0x08, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67
         };
-    uint8_t tag1[3] = {0xDF, 0x92, 0x23};
-    uint8_t value1[5] = {0x11, 0x19, 0x23, 0x44, 0x55};
-    uint8_t testTlvBuffer1[] = {0xDF, 0x92, 0x23, 0x05, 0x11, 0x19, 0x23, 0x44, 0x55};
-    int     testTlvBufferLen1 = sizeof(testTlvBuffer1);
-    int tagLen1 = sizeof(tag1);
-    int valueLen1 = sizeof(value1);
-    uint8_t tag2[2] = {0x9F, 0x02};
-    uint8_t value2[6] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56};
-    uint8_t testTlvBuffer2[] = {0x9F, 0x02, 0x06, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56};
-    int     testTlvBufferLen2 = sizeof(testTlvBuffer2);
-    int tagLen2 = sizeof(tag2);
-    int valueLen2 = sizeof(value2);
-    uint8_t tag3[1] = {0x53};
-    uint8_t value3[8] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67};
-    uint8_t testTlvBuffer3[] = {0x53, 0x08, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67};
-    int     testTlvBufferLen3 = sizeof(testTlvBuffer3);
-    int tagLen3 = sizeof(tag3);
-    int valueLen3 = sizeof(value3);
+    uint8 tag1[3] = {0xDF, 0x92, 0x23};
+    uint8 value1[5] = {0x11, 0x19, 0x23, 0x44, 0x55};
+    uint8 testTlvBuffer1[] = {0xDF, 0x92, 0x23, 0x05, 0x11, 0x19, 0x23, 0x44, 0x55};
+    uint32     testTlvBufferLen1 = sizeof(testTlvBuffer1);
+    uint32 tagLen1 = sizeof(tag1);
+    uint32 valueLen1 = sizeof(value1);
+    uint8 tag2[2] = {0x9F, 0x02};
+    uint8 value2[6] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56};
+    uint8 testTlvBuffer2[] = {0x9F, 0x02, 0x06, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56};
+    uint32     testTlvBufferLen2 = sizeof(testTlvBuffer2);
+    uint32 tagLen2 = sizeof(tag2);
+    uint32 valueLen2 = sizeof(value2);
+    uint8 tag3[1] = {0x53};
+    uint8 value3[8] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67};
+    uint8 testTlvBuffer3[] = {0x53, 0x08, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67};
+    uint32     testTlvBufferLen3 = sizeof(testTlvBuffer3);
+    uint32 tagLen3 = sizeof(tag3);
+    uint32 valueLen3 = sizeof(value3);
 
     initTlvList();
 
@@ -358,10 +367,10 @@ void testTlvListBuild(void)
     tlvListBufferLength = buildTlvListBuffer();
 
     printAllOfTlvBuffers();
-    printf("TLV List Buffer length : %d\n\r", tlvListBufferLength);
+    printf("TLV List Buffer length : %ld\n\r", tlvListBufferLength);
     assert(tlvListBufferLength == testTlvListBufferLength);
     assert(memcmp(tlvListBufferS, testTlvListBuffer, tlvListBufferLength) == 0);
-    uint8_t outstr[1000];
+    uint8 outstr[1000];
     memset(outstr, 0x00, sizeof(outstr));
     byteArrayToHexStringWithZero(tlvListBufferS, tlvListBufferLength, outstr);
     printf("TLV List Buffer : %s\n\r", outstr);
@@ -373,43 +382,43 @@ void testTlvListBuild(void)
 /**< Build a nested TLV */
 void testBuildTlvExample1(void)
 {
-    int tlvListBufferLength;
-    uint8_t testTlvListBuffer[] = {
+    uint32 tlvListBufferLength;
+    uint8 testTlvListBuffer[] = {
         0x6F, 0x1A, 0x84, 0x0E, 0x31, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44,
         0x44, 0x46, 0x30, 0x31, 0xA5, 0x08, 0x88, 0x01, 0x02, 0x5F, 0x2D, 0x02, 0x65, 0x6E
         };
-    int testTlvListBufferLength = sizeof(testTlvListBuffer);
+    uint32 testTlvListBufferLength = sizeof(testTlvListBuffer);
     initTlvList();
-    uint8_t tag1[] = {0x88};
-    uint8_t value1[] = {0x02};
-    uint8_t tag2[] = {0x5F, 0x2D};
-    uint8_t value2[] = {0x65, 0x6E};
+    uint8 tag1[] = {0x88};
+    uint8 value1[] = {0x02};
+    uint8 tag2[] = {0x5F, 0x2D};
+    uint8 value2[] = {0x65, 0x6E};
     addNexTlvToList(tag1, sizeof(tag1), value1, sizeof(value1));
     addNexTlvToList(tag2, sizeof(tag2), value2, sizeof(value2));
     tlvListBufferLength = buildTlvListBuffer();
     printAllOfTlvBuffers();
-    printf("TLV List Buffer length : %d\n\r", tlvListBufferLength);
+    printf("TLV List Buffer length : %ld\n\r", tlvListBufferLength);
     freeTlvList();
     initTlvList();
-    uint8_t tag3[] = {0x84};
-    uint8_t value3[] = {0x31, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31};
-    uint8_t tag4[] = {0xA5};
+    uint8 tag3[] = {0x84};
+    uint8 value3[] = {0x31, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31};
+    uint8 tag4[] = {0xA5};
     addNexTlvToList(tag3, sizeof(tag3), value3, sizeof(value3));
     addNexTlvToList(tag4, sizeof(tag4), tlvListBufferS, tlvListBufferLength);
     tlvListBufferLength = buildTlvListBuffer();
     printAllOfTlvBuffers();
-    printf("TLV List Buffer length : %d\n\r", tlvListBufferLength);
+    printf("TLV List Buffer length : %ld\n\r", tlvListBufferLength);
     freeTlvList();
     initTlvList();
-    uint8_t tag5[] = {0x6F};
+    uint8 tag5[] = {0x6F};
     addNexTlvToList(tag5, sizeof(tag5), tlvListBufferS, tlvListBufferLength);
     tlvListBufferLength = buildTlvListBuffer();
     printAllOfTlvBuffers();
-    printf("TLV List Buffer length : %d\n\r", tlvListBufferLength);
+    printf("TLV List Buffer length : %ld\n\r", tlvListBufferLength);
     freeTlvList();
     assert(tlvListBufferLength == testTlvListBufferLength);
     assert(memcmp(tlvListBufferS, testTlvListBuffer, tlvListBufferLength) == 0);
-    uint8_t outstr[1000];
+    uint8 outstr[1000];
     memset(outstr, 0x00, sizeof(outstr));
     byteArrayToHexStringWithZero(tlvListBufferS, tlvListBufferLength, outstr);
     printf("TLV List Buffer : %s\n\r", outstr);
@@ -417,11 +426,12 @@ void testBuildTlvExample1(void)
 }
 
 /*-------------  TLV Parser Functions -------------*/
+
 void printAllOfTlvTagValuePair(void)
 {
-    uint8_t tagStr[5];
-    uint8_t valueStr[1000];
-    int i = 0;
+    uint8 tagStr[5];
+    uint8 valueStr[1000];
+    uint32 i = 0;
     printf("\n\rTLV Parsed data:\n\r");
     for(tlvCurrentS = tlvHeaderS; tlvCurrentS != NULL; tlvCurrentS = tlvCurrentS->next)
     {
@@ -435,14 +445,14 @@ void printAllOfTlvTagValuePair(void)
     }
 }
 
-int getTagLenFromList(uint8_t* tagStartBuffer)
+uint32 getTagLenFromBufferList(uint8* tagStartBuffer)
 {
-    uint8_t* tag;
-    uint8_t maskFirstSubsequentByte = 0x1F;
-    uint8_t maskAnotherTagByte = 0x80;
-    uint8_t lastByte = 0;
-    int i = 0;
-    if((tag = (uint8_t*)calloc(1, sizeof(uint8_t))) == NULL)
+    uint8* tag;
+    uint8 maskFirstSubsequentByte = 0x1F;
+    uint8 maskAnotherTagByte = 0x80;
+    uint8 lastByte = 0;
+    uint32 i = 0;
+    if((tag = (uint8*)calloc(1, sizeof(uint8))) == NULL)
     {
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
@@ -451,7 +461,7 @@ int getTagLenFromList(uint8_t* tagStartBuffer)
     if((tag[i] & maskFirstSubsequentByte) == maskFirstSubsequentByte)
     {
         i++;
-        if((tag = (uint8_t*)realloc(tag, (i + 1) * sizeof(uint8_t))) == NULL)
+        if((tag = (uint8*)realloc(tag, (i + 1) * sizeof(uint8))) == NULL)
         {
             displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
             return FALSE;
@@ -462,7 +472,7 @@ int getTagLenFromList(uint8_t* tagStartBuffer)
             if((tag[i] & maskAnotherTagByte) == maskAnotherTagByte)
             {
                 i++;
-                if((tag = (uint8_t*)realloc(tag, (i + 1) * sizeof(uint8_t))) == NULL)
+                if((tag = (uint8*)realloc(tag, (i + 1) * sizeof(uint8))) == NULL)
                 {
                     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
                     return FALSE;
@@ -477,10 +487,10 @@ int getTagLenFromList(uint8_t* tagStartBuffer)
     return i + 1;
 }
 
- int getLenOfLengthFromList(uint8_t firstByteOfLength)
+ uint32 getLenOfLengthFromList(uint8 firstByteOfLength)
  {
-    int lenOfLength;
-    uint8_t maskFirstMsbBit = 0x80;
+    uint32 lenOfLength;
+    uint8 maskFirstMsbBit = 0x80;
     if ((firstByteOfLength & maskFirstMsbBit) == maskFirstMsbBit)
         lenOfLength = (firstByteOfLength & ~(maskFirstMsbBit)) + 1;
     else
@@ -488,11 +498,11 @@ int getTagLenFromList(uint8_t* tagStartBuffer)
     return lenOfLength;
  }
 
- int getValueLenFromLength(uint8_t* length)
+ uint32 getValueLenFromLength(uint8* length)
  {
-     int lenOfLength = getLenOfLengthFromList(length[0]);
-     int valueLen = 0;
-     int i;
+     uint32 lenOfLength = getLenOfLengthFromList(length[0]);
+     uint32 valueLen = 0;
+     uint32 i;
      if(lenOfLength == 1)
      {
         valueLen = length[0];
@@ -507,23 +517,18 @@ int getTagLenFromList(uint8_t* tagStartBuffer)
     return valueLen;
  }
 
-void extractDataFromList(uint8_t* inputData, int desiredLength,uint8_t* outData)
-{
-    memcpy(outData, inputData, desiredLength);
-}
-
-int getNextTlvFromList(uint8_t* tlvListBufferPtr, uint8_t nestLevel)
+uint32 getNextTlvFromList(uint8* tlvListBufferPtr, uint8 nestLevel)
 {
 tlvNode_t* tlvPrevious;
 tlvInfoST* tlvInfo;
-int offset = 0;
-int tlvBufferLen;
-uint8_t maskCheckNested = 0x20;
+uint32 offset = 0;
+uint32 tlvBufferLen;
+uint8 maskCheckNested = 0x20;
 
 /**< Memory Allocation of next node if tlvInfo of Current node is not empty*/
 if(tlvCurrentS->tlvInfo != NULL)
 {
-    if((tlvCurrentS->next = (uint8_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
+    if((tlvCurrentS->next = (tlvNode_t*)calloc(1, sizeof(tlvNode_t))) == NULL)
     {
         displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
         return FALSE;
@@ -534,7 +539,7 @@ if(tlvCurrentS->tlvInfo != NULL)
 }
 
 /**< Allocate memory for tlvInfo */
-if((tlvCurrentS->tlvInfo = (uint8_t*)calloc(1, sizeof(tlvInfoST))) == NULL)
+if((tlvCurrentS->tlvInfo = (tlvInfoST*)calloc(1, sizeof(tlvInfoST))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvCurrentS);
@@ -547,8 +552,8 @@ tlvInfo = tlvCurrentS->tlvInfo;
 
 tlvInfo->nestLevel = nestLevel;
 
-tlvInfo->tagLen = getTagLenFromList(tlvListBufferPtr);
-if((tlvInfo->tag = (uint8_t*)calloc(tlvInfo->tagLen, sizeof(uint8_t))) == NULL)
+tlvInfo->tagLen = getTagLenFromBufferList(tlvListBufferPtr);
+if((tlvInfo->tag = (uint8*)calloc(tlvInfo->tagLen, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo);
@@ -557,11 +562,11 @@ if((tlvInfo->tag = (uint8_t*)calloc(tlvInfo->tagLen, sizeof(uint8_t))) == NULL)
     tlvCurrentS->next =NULL;
     return FALSE;
 }
-extractDataFromList(tlvListBufferPtr + offset, tlvInfo->tagLen, tlvInfo->tag);
+memcpy(tlvInfo->tag, tlvListBufferPtr + offset, tlvInfo->tagLen);
 
 offset += tlvInfo->tagLen;
-tlvInfo->lenOfLength = getLenOfLengthFromList(*(uint8_t*)(tlvListBufferPtr + offset));
-if((tlvInfo->length = (uint8_t*)calloc(tlvInfo->lenOfLength, sizeof(uint8_t))) == NULL)
+tlvInfo->lenOfLength = getLenOfLengthFromList(*(uint8*)(tlvListBufferPtr + offset));
+if((tlvInfo->length = (uint8*)calloc(tlvInfo->lenOfLength, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo->tag);
@@ -571,10 +576,10 @@ if((tlvInfo->length = (uint8_t*)calloc(tlvInfo->lenOfLength, sizeof(uint8_t))) =
     tlvCurrentS->next =NULL;
     return FALSE;
 }
-extractDataFromList(tlvListBufferPtr + offset, tlvInfo->lenOfLength, tlvInfo->length);
+memcpy(tlvInfo->length, tlvListBufferPtr + offset, tlvInfo->lenOfLength);
 
 tlvInfo->valueLen = getValueLenFromLength(tlvInfo->length);
-if((tlvInfo->value = (uint8_t*)calloc(tlvInfo->valueLen, sizeof(uint8_t))) == NULL)
+if((tlvInfo->value = (uint8*)calloc(tlvInfo->valueLen, sizeof(uint8))) == NULL)
 {
     displayMessageBox(LCD_STR_MEMMORY_LEAKAGE, MSG_ERROR);
     free(tlvInfo->tag);
@@ -586,13 +591,13 @@ if((tlvInfo->value = (uint8_t*)calloc(tlvInfo->valueLen, sizeof(uint8_t))) == NU
     return FALSE;
 }
 offset += tlvInfo->lenOfLength;
-extractDataFromList(tlvListBufferPtr + offset, tlvInfo->valueLen, tlvInfo->value);
+memcpy(tlvInfo->value, tlvListBufferPtr + offset, tlvInfo->valueLen);
 
 tlvInfo->tlvBufferLen =  tlvInfo->tagLen + tlvInfo->lenOfLength + tlvInfo->valueLen;
 
 tlvBufferLen =  tlvInfo->tlvBufferLen;
 
-/**< Check if it's constructed parse constructed elements*/
+/**< Check if it's constructed, Parse constructed elements*/
 if(tlvInfo->tag[0] & maskCheckNested)
 {
     nestLevel++;
@@ -605,41 +610,41 @@ if(tlvInfo->tag[0] & maskCheckNested)
 return tlvBufferLen;
 }
 
-uint8_t tlvListParse(uint8_t* tlvListBuffer,int  tlvListBufferLength)
+uint8 tlvListParse(uint8* tlvListBuffer,uint32  tlvListBufferLength)
 {
-    uint8_t* tlvListBufferPtr;
-    int tlvBufferLen = 0;
+    uint8* tlvListBufferPtr;
+    uint32 tlvBufferLen = 0;
     tlvListBufferPtr = tlvListBuffer;
     while(tlvListBufferPtr - tlvListBuffer <  tlvListBufferLength){
         tlvBufferLen = getNextTlvFromList(tlvListBufferPtr, 0);
-        tlvListBufferPtr = (uint8_t*)(tlvListBufferPtr + tlvBufferLen);
+        tlvListBufferPtr = (uint8*)(tlvListBufferPtr + tlvBufferLen);
     }
     return TRUE;
 }
 
 void testGetTagLenFromList(void)
 {
-    uint8_t testTlvTag[3][4] = {{0x81, 0x23, 0x43, 0x12},{0x9F, 0x01, 0x11, 0x12}, {0x9F, 0x81, 0x23, 0x56}};
-    int     testTlvTagLen[3] = {1, 2, 3};
-    int tlvTagLen[3];
-    int i;
+    uint8 testTlvTag[3][4] = {{0x81, 0x23, 0x43, 0x12},{0x9F, 0x01, 0x11, 0x12}, {0x9F, 0x81, 0x23, 0x56}};
+    uint32     testTlvTagLen[3] = {1, 2, 3};
+    uint32 tlvTagLen[3];
+    uint32 i;
     for(i = 0; i < 3; i++)
     {
-        tlvTagLen[i] = getTagLenFromList(testTlvTag[i]);
+        tlvTagLen[i] = getTagLenFromBufferList(testTlvTag[i]);
         assert(tlvTagLen[i] == testTlvTagLen[i]);
     }
-    printf("Test function getTagLenFromList Successfully done.\n\r");
+    printf("Test function getTagLenFromBufferList Successfully done.\n\r");
 }
 
 void testGetLenOfLengthFromList(void)
 {
-    uint8_t testFirstByteOfLength[3] = {0x55, 0x81, 0x85};
-    uint8_t testLenOfLength[3] = {1, 2, 6};
-    int     lenOfLength[3];
-    int i;
+    uint8 testFirstByteOfLength[3] = {0x55, 0x81, 0x85};
+    uint8 testLenOfLength[3] = {1, 2, 6};
+    uint32     lenOfLength[3];
+    uint32 i;
     for (i = 0; i < 3; i++)
     {
-        lenOfLength[i] = getLenOfLengthFromList(*(uint8_t *)(testFirstByteOfLength + i));
+        lenOfLength[i] = getLenOfLengthFromList(*(uint8 *)(testFirstByteOfLength + i));
         assert(testLenOfLength[i] == lenOfLength[i]);
     }
     printf("Test function getLenOfLengthFromList Successfully done.\n\r");
@@ -647,10 +652,10 @@ void testGetLenOfLengthFromList(void)
 
 void testGetValueLenFromLength(void)
 {
-    uint8_t testLength[5][6] = {{0x55, 0x20}, {0x81, 0x80, 0x22}, {0x82, 0x01, 0x22, 0x95}, {0x83, 0x03, 0x00, 0x11, 0x12}, {0x84, 0x12, 0x01, 0x16, 0x55, 0x22}};
-    int testValueLen[5] = {0x55, 0x80, 0x122, 0x30011, 0x12011655};
-    int valueLen[5];
-    int i;
+    uint8 testLength[5][6] = {{0x55, 0x20}, {0x81, 0x80, 0x22}, {0x82, 0x01, 0x22, 0x95}, {0x83, 0x03, 0x00, 0x11, 0x12}, {0x84, 0x12, 0x01, 0x16, 0x55, 0x22}};
+    uint32 testValueLen[5] = {0x55, 0x80, 0x122, 0x30011, 0x12011655};
+    uint32 valueLen[5];
+    uint32 i;
     for (i = 0; i < 5; i++)
     {
         valueLen[i] = getValueLenFromLength(testLength[i]);
@@ -661,23 +666,23 @@ void testGetValueLenFromLength(void)
 
 void testTlvListParse(void)
 {
-    uint8_t tlvListBuffer[] = {0xDF, 0x92, 0x23, 0x05, 0x11, 0x19, 0x23, 0x44, 0x55,
+    uint8 tlvListBuffer[] = {0xDF, 0x92, 0x23, 0x05, 0x11, 0x19, 0x23, 0x44, 0x55,
                                0x9F, 0x02, 0x06, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56,
                                0x53, 0x08, 0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67
                               };
-    int tlvListBufferLength =  sizeof(tlvListBuffer);
-    uint8_t testTag1[3] = {0xDF, 0x92, 0x23};
-    uint8_t testValue1[5] = {0x11, 0x19, 0x23, 0x44, 0x55};
-    int testTagLen1 = sizeof(testTag1);
-    int testValueLen1 = sizeof(testValue1);
-    uint8_t testTag2[2] = {0x9F, 0x02};
-    uint8_t testValue2[6] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56};
-    int testTagLen2 = sizeof(testTag2);
-    int testValueLen2 = sizeof(testValue2);
-    uint8_t testTag3[1] = {0x53};
-    uint8_t testValue3[8] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67};
-    int testTagLen3 = sizeof(testTag3);
-    int testValueLen3 = sizeof(testValue3);
+    uint32 tlvListBufferLength =  sizeof(tlvListBuffer);
+    uint8 testTag1[3] = {0xDF, 0x92, 0x23};
+    uint8 testValue1[5] = {0x11, 0x19, 0x23, 0x44, 0x55};
+    uint32 testTagLen1 = sizeof(testTag1);
+    uint32 testValueLen1 = sizeof(testValue1);
+    uint8 testTag2[2] = {0x9F, 0x02};
+    uint8 testValue2[6] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56};
+    uint32 testTagLen2 = sizeof(testTag2);
+    uint32 testValueLen2 = sizeof(testValue2);
+    uint8 testTag3[1] = {0x53};
+    uint8 testValue3[8] = {0x99, 0x88, 0x23, 0x44, 0x55, 0x56, 0x78, 0x67};
+    uint32 testTagLen3 = sizeof(testTag3);
+    uint32 testValueLen3 = sizeof(testValue3);
 
     initTlvList();
     tlvListParse(tlvListBuffer, tlvListBufferLength);
@@ -710,7 +715,7 @@ void testTlvListParse(void)
 
 void testParseExmaple1(void)
 {
-    uint8_t tlvListBuffer[] = {
+    uint8 tlvListBuffer[] = {
     0xDF, 0xEE, 0x25, 0x02, 0x00, 0x02, 0xDF, 0xEE, 0x26, 0x02, 0x20, 0x00, 0xDF, 0xEE, 0x12,
     0x0A, 0x62, 0x99, 0x49, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x74, 0xDF, 0xEF, 0x5D, 0x10,
     0x51, 0x28, 0xCC, 0xCC, 0xCC, 0xCC, 0x28, 0x77, 0xD1, 0x80, 0x16, 0x22, 0xCC, 0xCC, 0xCC,
@@ -742,7 +747,7 @@ void testParseExmaple1(void)
     0x75, 0x86, 0x45, 0x35, 0x83, 0xB4, 0xA0, 0x3A, 0xB3, 0x33, 0xFB, 0x21, 0x0F, 0xD1, 0xCD,
     0x4F, 0x8A, 0xC3, 0x60, 0x3D, 0x75, 0x68, 0x8E,
     };
-    int tlvListBufferLength =  sizeof(tlvListBuffer);
+    uint32 tlvListBufferLength =  sizeof(tlvListBuffer);
     initTlvList();
     tlvListParse(tlvListBuffer, tlvListBufferLength);
     printAllOfTlvTagValuePair();
@@ -752,11 +757,11 @@ void testParseExmaple1(void)
 void testParseExmaple2(void)
 {
     /**< Nested TLV*/
-    uint8_t tlvListBuffer[] = {
+    uint8 tlvListBuffer[] = {
     0x6F, 0x1A, 0x84, 0x0E, 0x31, 0x50, 0x41, 0x59, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44,
     0x46, 0x30, 0x31, 0xA5, 0x08, 0x88, 0x01, 0x02, 0x5F, 0x2D, 0x02, 0x65, 0x6E
     };
-    int tlvListBufferLength =  sizeof(tlvListBuffer);
+    uint32 tlvListBufferLength =  sizeof(tlvListBuffer);
     initTlvList();
     tlvListParse(tlvListBuffer, tlvListBufferLength);
     printAllOfTlvTagValuePair();
@@ -775,7 +780,7 @@ void tlvUnitTest(void)
     testBuildTlvExample1();
     testParseExmaple1();
     testParseExmaple2();
-    printf("All tests passes successfully.\n\r");
+    printf("\n\rAll tests passed successfully.\n\r");
 }
 
 int main()

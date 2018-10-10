@@ -44,7 +44,7 @@ How to build
 	tlvBufferList = getTlvListBuffer();
 
 	printAllOfTlvBuffers();	
-	freeTlvList();
-	freeTlvListBuffer();
+	freeTlvList(); //Lost Of All TLV List
+	freeTlvListBuffer();//Lost Build of Buffer Data
 
 ```
